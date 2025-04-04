@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import time
 
 pygame.init()
 
@@ -19,28 +20,33 @@ snake_body = [[100, 100], [90, 100], [80, 100]]
 snake = pygame.image.load('snake.jpg').convert_alpha()
 snake = pygame.transform.scale(snake, (cell_size, cell_size))
 
-apple = pygame.image.load('apple.png').convert_alpha()
-apple = pygame.transform.scale(apple, (cell_size, cell_size))
+class Food:
+    def __init__(self):
+        self.rect = self.generate_food_rect()
+        self.weight = random.randint(1, 5)
+        self.creation_time = time.time()
+        self.image = pygame.image.load("apple.png").convert_alpha()
+        self.image = pygame.transform.scale(self.image, (cell_size, cell_size))
 
+    def generate_food_rect(self):
+        while True:
+            x = random.randint(0, (width - cell_size) // cell_size) * cell_size
+            y = random.randint(0, (height - cell_size) // cell_size) * cell_size
+            if [x, y] not in snake_body:
+                return pygame.Rect(x, y, cell_size, cell_size)
+
+    def is_expired(self, expiration_time=5):
+        return time.time() - self.creation_time > expiration_time
+
+apple = Food()
 font = pygame.font.SysFont("Verdana", 20)
-
-def generate_food():
-    while True:
-        x = random.randint(0, (width - cell_size) // cell_size) * cell_size
-        y = random.randint(0, (height - cell_size) // cell_size) * cell_size
-        if [x, y] not in snake_body:
-            return pygame.Rect(x, y, cell_size, cell_size)
-
-apple_rect = generate_food()
 
 direction = 'RIGHT'
 change_to = direction
 clock = pygame.time.Clock()
-
 score = 0
 level = 1
 speed = 10
-
 Running = True
 
 while Running:
@@ -70,23 +76,24 @@ while Running:
     elif direction == 'LEFT':
         snake_pos[0] -= cell_size
 
-    
     snake_pos[0] %= width
     snake_pos[1] %= height
-
     snake_body.insert(0, list(snake_pos))
 
-    if pygame.Rect(snake_pos[0], snake_pos[1], cell_size, cell_size).colliderect(apple_rect):
-        score += 1
-        if score % 4 == 0:
+    if pygame.Rect(snake_pos[0], snake_pos[1], cell_size, cell_size).colliderect(apple.rect):
+        score += apple.weight
+        if score // 4 + 1 > level:
             level += 1
             speed += 2
-        apple_rect = generate_food()
+        apple = Food()
     else:
         snake_body.pop()
 
+    if apple.is_expired():
+        apple = Food()
+
     screen.fill(black)
-    screen.blit(apple, apple_rect.topleft)
+    screen.blit(apple.image, apple.rect.topleft)
 
     for block in snake_body:
         pygame.draw.rect(screen, green, pygame.Rect(block[0], block[1], cell_size, cell_size))
